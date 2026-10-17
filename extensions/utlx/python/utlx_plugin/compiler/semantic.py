@@ -30,6 +30,11 @@ from triton.language.semantic import TritonSemantic as _BaseSemantic
 
 from ..layout_ops import _carrier_type, _require
 
+try:
+    from triton.experimental.gluon.language import distributed_type as _gluon_type
+except ImportError:  # Triton built without gluon
+    _gluon_type = ()
+
 _TensorTy = TypeVar("_TensorTy")
 
 
@@ -47,6 +52,11 @@ def _promote(handle, type):
     encoding is silently dropped.
     """
     if not isinstance(type, tl.block_type) or isinstance(type, _carrier_type):
+        return type
+    # Gluon's distributed_type subclasses block_type and always carries its
+    # layout; re-typing it as a carrier makes gluon ops reject the value. This
+    # path also sees gluon kernels whenever the tl.tensor fallback patch is in.
+    if isinstance(type, _gluon_type):
         return type
     try:
         ir_ty = handle.get_type()

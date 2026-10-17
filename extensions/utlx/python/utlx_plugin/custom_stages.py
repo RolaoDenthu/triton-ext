@@ -5,6 +5,7 @@ Hooks into triton's compilation pipeline to inject uTLX passes.
 
 from triton._C.libtriton import ir, passes, amd
 from triton import knobs
+from triton.backends.compiler import Language
 import hashlib
 import pathlib
 
@@ -131,6 +132,11 @@ def inspect_stages_hook(self=None,
                         language=None,
                         capability=None):
     if all(arg is None for arg in (stages, options, language, capability)):
+        return get_key(), get_hash()
+
+    # Gluon kernels have their own ttgir stage (gluon_to_ttgir) and are already
+    # in TTGIR; the uTLX TTIR->TTGIR conversion marks their amdg ops illegal.
+    if language is not None and language != Language.TRITON:
         return get_key(), get_hash()
 
     backend_name = getattr(self, 'name', '') if self else ''
